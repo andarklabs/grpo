@@ -13,12 +13,8 @@ def grpo(o_i, p_r, p_o, p, a,r_i,r, b = BETA, g = G):
         return np.sum(np.sum(min(p,p_o,a)-b*kl.unbiased_estimator_kl_div(p_r,p))/len(o_i))/g
     # print("Hello from grpo!")
 
-
-def advantage(o_i):
-    pass
-
 def min(p,p_o,a, e = EPSILON):
-    return np.min(p/p_o, np.clip(p/p_o,1-e,1+e))*a
+    return np.min( p/p_o, 1+e ) * a # TODO: Check that this is indeed the same
 
 '''
 def cycle(o_i, p_r, p_o, p, a, b = BETA):
