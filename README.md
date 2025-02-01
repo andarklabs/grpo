@@ -12,4 +12,5 @@ setup venv
 ```
 uv venv grpo --python=3.11
 source grpo/bin/activate
+uv pip install -e .
 ```
