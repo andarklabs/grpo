@@ -13,18 +13,16 @@ def kl_div(p: NDArray[float], q: NDArray[float] ) -> float:
     """
     return np.sum(p * np.log(p /  q))
 
-def appx_kl_div(p: NDArray[float], q: NDArray[float] ) -> float:
+def unbiased_estimator_kl_div(p: NDArray[float], q: NDArray[float] ) -> NDArrray[float]:
     """
-    given two probability distributions, compute the average difference.
-
-    wiki:
-    http://joschu.net/blog/kl-approx.html
+    unbiased estimator kl divergence (guaranteed to be positive)
     """
-    return np.sum(p * np.log(p /  q))
+    return (p / q) - np.log(p / q) - 1
 
 if __name__ == "__main__":
-    # ground-truth distribution
+    # ground-truth distribution (in our case: reference policy)
     p = np.array([.2,.3,.5])
     # predicted distribution
     q = np.array([.2,.2,.6])
     print(kl_div(p, q))
+    print(unbiased_estimator_kl_div(p, q))
