@@ -1,7 +1,7 @@
 import math
 from typing import Dict, List, Optional, Set
 
-import modelconfigs
+import go.modelconfigs as modelconfigs
 import packaging
 import packaging.version
 import torch
