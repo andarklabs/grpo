@@ -8,6 +8,7 @@ goal: get this model file to just use GRPO.
 4. evaluate against reference
 5. win life
 
+use existing model checkpoint with synchronous loop: train from a previous checkpoint
 
 grpo surgery 
     - determine what the policy head gets as input (shape and information)
