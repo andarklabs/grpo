@@ -996,8 +996,7 @@ class PolicyHead(torch.nn.Module):
             dim=2,
         )
 
-
-'''class ValueHead(torch.nn.Module):
+class ValueHead(torch.nn.Module):
     def __init__(
         self, c_in, c_v1, c_v2, c_sv2, num_scorebeliefs, config, activation, pos_len
     ):
@@ -1266,22 +1265,24 @@ class PolicyHead(torch.nn.Module):
             out_seki,
             out_scorebelief_logprobs,
         )
-'''
+
 
 class Model(torch.nn.Module):
     def __init__(self, config: modelconfigs.ModelConfig, pos_len: int):
         super(Model, self).__init__()
 
+        # Store configuration parameters
+            # Store configuration parameters
         self.config = config
         self.norm_kind = config["norm_kind"]
         self.block_kind = config["block_kind"]
+        
+        # Define various channel sizes for different layers
         self.c_trunk = config["trunk_num_channels"]
         self.c_mid = config["mid_num_channels"]
         self.c_gpool = config["gpool_num_channels"]
         self.c_outermid = (
-            config["outermid_num_channels"]
-            if "outermid_num_channels" in config
-            else self.c_mid
+            config["outermid_num_channels"] if "outermid_num_channels" in config else self.c_mid
         )
         self.c_p1 = config["p1_num_channels"]
         self.c_g1 = config["g1_num_channels"]
@@ -1292,25 +1293,24 @@ class Model(torch.nn.Module):
         self.num_total_blocks = len(self.block_kind)
         self.pos_len = pos_len
 
+        # Define multipliers for different score-related calculations
+        self.td_score_multiplier = 20.0
+        self.scoremean_multiplier = 20.0
+        self.scorestdev_multiplier = 20.0
+        self.lead_multiplier = 20.0
+        self.variance_time_multiplier = 40.0
+        self.shortterm_value_error_multiplier = 0.25
+
+        # Define short-term score error multiplier based on version
         if config["version"] <= 12:
-            self.td_score_multiplier = 20.0
-            self.scoremean_multiplier = 20.0
-            self.scorestdev_multiplier = 20.0
-            self.lead_multiplier = 20.0
-            self.variance_time_multiplier = 40.0
-            self.shortterm_value_error_multiplier = 0.25
             self.shortterm_score_error_multiplier = 30.0
         else:
-            self.td_score_multiplier = 20.0
-            self.scoremean_multiplier = 20.0
-            self.scorestdev_multiplier = 20.0
-            self.lead_multiplier = 20.0
-            self.variance_time_multiplier = 40.0
-            self.shortterm_value_error_multiplier = 0.25
             self.shortterm_score_error_multiplier = 150.0
 
+        # Check if trunk normalization should be disabled
         self.trunk_normless = "trunk_normless" in config and config["trunk_normless"]
 
+        # Define intermediate head properties if specified in the configuration
         if "has_intermediate_head" in config and config["has_intermediate_head"]:
             self.has_intermediate_head = True
             self.intermediate_head_blocks = config["intermediate_head_blocks"]
@@ -1318,8 +1318,10 @@ class Model(torch.nn.Module):
             self.has_intermediate_head = False
             self.intermediate_head_blocks = 0
 
+        # Set activation function (default is ReLU)
         self.activation = "relu" if "activation" not in config else config["activation"]
 
+        # Define convolution layers based on initial convolution configuration
         if config["initial_conv_1x1"]:
             self.conv_spatial = torch.nn.Conv2d(
                 22, self.c_trunk, kernel_size=1, padding="same", bias=False
@@ -1328,22 +1330,30 @@ class Model(torch.nn.Module):
             self.conv_spatial = torch.nn.Conv2d(
                 22, self.c_trunk, kernel_size=3, padding="same", bias=False
             )
+        
+        # Define global linear transformation
         self.linear_global = torch.nn.Linear(19, self.c_trunk, bias=False)
 
+        # Initialize metadata encoder (optional feature)
         self.metadata_encoder = None
 
+        # Define input shapes
         self.bin_input_shape = [22, pos_len, pos_len]
         self.global_input_shape = [19]
 
+        # Define and initialize the model's residual blocks
         self.blocks = torch.nn.ModuleList()
         for block_config in self.block_kind:
             block_name = block_config[0]
             block_kind = block_config[1]
             use_gpool_this_block = False
+
+            # Check if the block has a global pooling layer
             if block_kind.endswith("gpool"):
                 use_gpool_this_block = True
                 block_kind = block_kind[:-5]
 
+            # Add the appropriate type of block based on configuration
             if block_kind == "bottlenest2":
                 self.blocks.append(
                     NestedBottleneckResBlock(
@@ -1359,6 +1369,7 @@ class Model(torch.nn.Module):
             else:
                 assert False, f"Unknown block kind: {block_config[1]}"
 
+        # Define normalization and activation layers for the trunk output
         if self.trunk_normless:
             self.norm_trunkfinal = BiasMask(
                 self.c_trunk, self.config, is_after_batchnorm=True
@@ -1369,44 +1380,27 @@ class Model(torch.nn.Module):
             )
         self.act_trunkfinal = act(self.activation)
 
+        # Define policy and value heads
         self.policy_head = PolicyHead(
-            self.c_trunk,
-            self.c_p1,
-            self.c_g1,
-            self.config,
-            self.activation,
+            self.c_trunk, self.c_p1, self.c_g1, self.config, self.activation
         )
         self.value_head = ValueHead(
-            self.c_trunk,
-            self.c_v1,
-            self.c_v2,
-            self.c_sv2,
-            self.num_scorebeliefs,
-            self.config,
-            self.activation,
-            self.pos_len,
+            self.c_trunk, self.c_v1, self.c_v2, self.c_sv2, self.num_scorebeliefs,
+            self.config, self.activation, self.pos_len
         )
+
+        # If intermediate heads are enabled, define additional policy and value heads
         if self.has_intermediate_head:
             self.norm_intermediate_trunkfinal = NormMask(
                 self.c_trunk, self.config, fixup_use_gamma=False, is_last_batchnorm=True
             )
             self.act_intermediate_trunkfinal = act(self.activation)
             self.intermediate_policy_head = PolicyHead(
-                self.c_trunk,
-                self.c_p1,
-                self.c_g1,
-                self.config,
-                self.activation,
+                self.c_trunk, self.c_p1, self.c_g1, self.config, self.activation
             )
             self.intermediate_value_head = ValueHead(
-                self.c_trunk,
-                self.c_v1,
-                self.c_v2,
-                self.c_sv2,
-                self.num_scorebeliefs,
-                self.config,
-                self.activation,
-                self.pos_len,
+                self.c_trunk, self.c_v1, self.c_v2, self.c_sv2, self.num_scorebeliefs,
+                self.config, self.activation, self.pos_len
             )
 
     @property

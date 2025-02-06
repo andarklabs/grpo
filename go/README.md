@@ -9,4 +9,19 @@ goal: get this model file to just use GRPO.
 5. win life
 
 
+grpo surgery 
+    - determine what the policy head gets as input (shape and information)
+    - determine the same for value head
+    - look into weights file to see what goes to what part 
+        - Parts:
+            - 2 conv layers + 1 dense layer
+            - Res trunk (made of 18 blocks - conv, resbottleneck, some global pooling)
+            - bias/norm
+            - policy
+            - value
+            --- intermediate heads ---
+            - norm 
+            - policy
+            - value
+
 grpo paper: https://arxiv.org/abs/2402.03300
