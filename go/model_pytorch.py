@@ -397,7 +397,7 @@ class KataGPool(torch.nn.Module):
         return out
 
 
-class KataValueHeadGPool(torch.nn.Module):
+'''class KataValueHeadGPool(torch.nn.Module):
     def __init__(self):
         super(KataValueHeadGPool, self).__init__()
 
@@ -424,7 +424,7 @@ class KataValueHeadGPool(torch.nn.Module):
 
         out = torch.cat((out_pool1, out_pool2, out_pool3), dim=1)
         return out
-
+'''
 
 class KataConvAndGPool(torch.nn.Module):
     def __init__(self, name, c_in, c_out, c_gpool, config, activation):
@@ -997,7 +997,7 @@ class PolicyHead(torch.nn.Module):
         )
 
 
-class ValueHead(torch.nn.Module):
+'''class ValueHead(torch.nn.Module):
     def __init__(
         self, c_in, c_v1, c_v2, c_sv2, num_scorebeliefs, config, activation, pos_len
     ):
@@ -1266,7 +1266,7 @@ class ValueHead(torch.nn.Module):
             out_seki,
             out_scorebelief_logprobs,
         )
-
+'''
 
 class Model(torch.nn.Module):
     def __init__(self, config: modelconfigs.ModelConfig, pos_len: int):
